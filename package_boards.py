@@ -59,7 +59,7 @@ def get_released_boards(per_page=30):
     return manifest_content, released_versions
 
 def create_tag_name():
-    return "v1.0.0"
+    return "latest"
 
 def create_release_title():
     return "New Board Index Released"
