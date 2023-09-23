@@ -5,7 +5,8 @@ import aiofiles
 import chevron
 import aiohttp
 import json
-from typing import Dict, List, Union
+from datetime import datetime
+from typing import List
 
 def version_ordering(a: List[int], b: List[int]):
     """
@@ -63,7 +64,7 @@ async def get_released_boards(session: aiohttp.ClientSession, per_page=30):
     return manifest_content, released_versions
 
 def create_tag_name():
-    return "latest"
+    return datetime.utcnow().strftime("v%Y-%m-%dT%H%M")
 
 def create_release_title():
     return "New Board Index Released"
