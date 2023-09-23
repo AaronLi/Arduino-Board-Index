@@ -1,0 +1,57 @@
+{
+    "name": "{{platform_name}}",
+    "architecture": "{{architecture}}",
+    "version": "{{version}}",
+    "category": "Contributed",
+    "url": "{{url}}",
+    "archiveFileName": "{{filename}}",
+    "checksum": "{{sha256_checksum}}",
+    "size": "{{size_bytes}}",
+    "help": {
+      "online": "https://www.dumfing.com"
+    },
+    "boards": [
+        {{#boards}}
+        {
+            "name": "{{.}}"
+        }
+        {{/boards}}
+    ],
+    "toolsDependencies": [
+      {
+        "packager": "adafruit",
+        "name": "arm-none-eabi-gcc",
+        "version": "9-2019q4"
+      },
+      {
+        "packager": "arduino",
+        "name": "bossac",
+        "version": "1.7.0-arduino3"
+      },
+      {
+        "packager": "adafruit",
+        "name": "bossac",
+        "version": "1.8.0-48-gb176eee"
+      },
+      {
+        "packager": "arduino",
+        "name": "openocd",
+        "version": "0.11.0-arduino2"
+      },
+      {
+        "packager": "adafruit",
+        "name": "CMSIS",
+        "version": "5.4.0"
+      },
+      {
+        "packager": "adafruit",
+        "name": "CMSIS-Atmel",
+        "version": "1.2.2"
+      },
+      {
+        "packager": "arduino",
+        "name": "arduinoOTA",
+        "version": "1.2.1"
+      }
+    ]
+  }
