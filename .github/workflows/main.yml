@@ -1,0 +1,19 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  release_changes:
+    name: Release Updated Board Index
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install requirements
+      run: pip install -r requirements.txt
+    - name: Run release creator
+      run: python package_boards.py
+      env:
+        GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
