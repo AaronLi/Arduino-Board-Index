@@ -6,6 +6,7 @@ import chevron
 import aiohttp
 import json
 from datetime import datetime
+from collections import defaultdict
 from typing import List
 
 def version_ordering(a: List[int], b: List[int]):
@@ -36,9 +37,9 @@ async def get_released_boards(session: aiohttp.ClientSession, per_page=30):
     Returns:
         dict: A dictionary containing the released versions of the Arduino Boards, indexed by platform.
     """
-    released_versions = {}
+    released_versions = defaultdict(dict)
     page_number = 0
-    manifest_content = {}
+    manifest_content = defaultdict(dict)
     while True:
         async with session.get('https://api.github.com/repos/AaronLi/Arduino-Boards/releases', headers={"accept": "application/vnd.github+json", 'per_page':str(per_page), 'page':str(page_number), "X-Github-Api-Version": '2022-11-28'}) as req:
             releases = await req.json()
@@ -48,15 +49,15 @@ async def get_released_boards(session: aiohttp.ClientSession, per_page=30):
                         async with session.get(asset['browser_download_url']) as manifest_req:
                             release_manifest_content = json.loads(await manifest_req.text())
                             for platform in release_manifest_content:
-                                platform_version = list(map(int, release_manifest_content[platform]['version'].split('.')))
-                                if platform not in manifest_content or version_ordering(manifest_content[platform]['version'], platform_version) < 0:
-                                    manifest_content[platform] = {'boards': release_manifest_content[platform]['boards'], 'version': platform_version, 'architecture': release_manifest_content[platform]['architecture']}
+                                version = release_manifest_content[platform]['version']
+                                platform_version = list(map(int, version.split('.')))
+                                manifest_content[platform][version] = {'boards': release_manifest_content[platform]['boards'], 'version': platform_version, 'architecture': release_manifest_content[platform]['architecture']}
                     else:
                         version, hash_platform_file = asset['name'].split('_', 1)
                         hash, platform_file = hash_platform_file.split('_', 1)
                         platform, extension = platform_file.split('.', 1)
                         print(f"Version {version} for {platform} filetype {extension} with sha256 {hash}")
-                        released_versions[platform] = {"version": list(map(int, version.split('.'))), "url": asset["browser_download_url"], 'filename': asset['name'], 'filesize': asset['size']}
+                        released_versions[platform][version] = {"version": list(map(int, version.split('.'))), "url": asset["browser_download_url"], 'filename': asset['name'], 'filesize': asset['size']}
 
             if len(releases) < per_page:
                 break
@@ -113,24 +114,25 @@ async def main():
                 print(manifest_info)
                 platform_entries = []
                 for platform in released_boards:
-                    version, checksum_platform_file = released_boards[platform]['filename'].split('_', 1)
-                    checksum, platform_file = checksum_platform_file.split('_', 1)
-                    platform_info = chevron.render(platform_template, 
-                                {
-                                        'platform_name': platform,
-                                        'architecture': manifest_info[platform]['architecture'],
-                                        'version': '.'.join(map(str, manifest_info[platform]['version'])),
-                                        'boards': manifest_info[platform]['boards'],
-                                        'url': released_boards[platform]['url'],
-                                        'filename': released_boards[platform]['filename'],
-                                        'size_bytes': released_boards[platform]['filesize'],
-                                        'sha256_checksum': checksum,
-                                }
-                    )
-                    platform_entries.append(platform_info)
+                    for version in released_boards[platform]:
+                        _, checksum_platform_file = released_boards[platform][version]['filename'].split('_', 1)
+                        checksum, _ = checksum_platform_file.split('_', 1)
+                        platform_info = chevron.render(platform_template, 
+                                    {
+                                            'platform_name': platform,
+                                            'architecture': manifest_info[platform][version]['architecture'],
+                                            'version': version,
+                                            'boards': manifest_info[platform][version]['boards'],
+                                            'url': released_boards[platform][version]['url'],
+                                            'filename': released_boards[platform][version]['filename'],
+                                            'size_bytes': released_boards[platform][version]['filesize'],
+                                            'sha256_checksum': checksum,
+                                    }
+                        )
+                        platform_entries.append(platform_info)
 
-                dmfg_index = chevron.render(index_template, {'platforms': platform_entries})
-
+                dmfg_index = chevron.render(index_template, {'platforms': map(lambda x: {'entry': x[1]} if x[0]+1 < len(platform_entries) else {'entry': x[1], 'last': True}, enumerate(platform_entries))})
+                sanity_check = json.loads(dmfg_index)
                 release_id = await create_release(session, os.environ['GH_API_TOKEN'])
 
                 await upload_assets(session, os.environ['GH_API_TOKEN'], release_id, dmfg_index)
